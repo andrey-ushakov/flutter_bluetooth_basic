@@ -1,13 +1,10 @@
-import 'dart:async';
+/*
+ * flutter_bluetooth_basic
+ * Created by Andrey U.
+ * 
+ * See LICENSE for distribution and usage details.
+ */
+library flutter_bluetooth_basic;
 
-import 'package:flutter/services.dart';
-
-class FlutterBluetoothBasic {
-  static const MethodChannel _channel =
-      const MethodChannel('flutter_bluetooth_basic');
-
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
-  }
-}
+export './src/bluetooth_manager.dart';
+export './src/bluetooth_device.dart';
