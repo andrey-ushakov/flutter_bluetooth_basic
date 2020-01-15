@@ -96,7 +96,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _sendData() async {
-    List<int> bytes = latin1.encode('test text!\n').toList();
+    List<int> bytes = latin1.encode('Hello world!\n\n\n').toList();
     await bluetoothManager.writeData(bytes);
   }
 
