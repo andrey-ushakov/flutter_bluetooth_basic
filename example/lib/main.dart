@@ -169,14 +169,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: Text('Send test data'),
                       onPressed: _connected ? _sendData : null,
                     ),
-                    // OutlineButton(
-                    //   child: Text('print selftest'),
-                    //   onPressed: _connected
-                    //       ? () async {
-                    //           await bluetoothManager.printTest();
-                    //         }
-                    //       : null,
-                    // )
                   ],
                 ),
               )

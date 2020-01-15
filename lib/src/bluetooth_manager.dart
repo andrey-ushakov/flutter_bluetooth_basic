@@ -5,17 +5,6 @@ import 'package:rxdart/rxdart.dart';
 
 import 'bluetooth_device.dart';
 
-class FlutterBluetoothBasic {
-  static const MethodChannel _channel =
-      const MethodChannel('flutter_bluetooth_basic');
-
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
-  }
-}
-
-
 /// A BluetoothManager.
 class BluetoothManager {
   static const String NAMESPACE = 'flutter_bluetooth_basic';
