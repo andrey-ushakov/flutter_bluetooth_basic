@@ -17,7 +17,6 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.gprinter.command.FactoryCommand;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
@@ -32,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 /** FlutterBluetoothBasicPlugin */
 public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPermissionsResultListener {
@@ -49,19 +49,8 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
   private MethodCall pendingCall;
   private Result pendingResult;
-//  @Override
-//  public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
-//    final MethodChannel channel = new MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "flutter_bluetooth_basic");
-//    channel.setMethodCallHandler(new FlutterBluetoothBasicPlugin());
-//  }
-
-//  @Override
-//  public void onDetachedFromEngine(FlutterPluginBinding binding) {
-//  }
 
   public static void registerWith(Registrar registrar) {
-//    final MethodChannel channel = new MethodChannel(registrar.messenger(), "flutter_bluetooth_basic");
-//    channel.setMethodCallHandler(new FlutterBluetoothBasicPlugin());
     final FlutterBluetoothBasicPlugin instance = new FlutterBluetoothBasicPlugin(registrar);
     registrar.addRequestPermissionsResultListener(instance);
   }
@@ -80,7 +69,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
   @Override
   public void onMethodCall(MethodCall call, Result result) {
     if (mBluetoothAdapter == null && !"isAvailable".equals(call.method)) {
-      result.error("bluetooth_unavailable", "the device does not have bluetooth", null);
+      result.error("bluetooth_unavailable", "Bluetooth is unavailable", null);
       return;
     }
 
@@ -99,8 +88,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
       case "isConnected":
         result.success(threadPool != null);
         break;
-      case "startScan":
-      {
+      case "startScan": {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
           ActivityCompat.requestPermissions(
@@ -127,17 +115,8 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
       case "destroy":
         result.success(destroy());
         break;
-      case "print":
-        print(result, args);
-        break;
-      case "printReceipt":
-        print(result, args);
-        break;
-      case "printLabel":
-        print(result, args);
-        break;
-      case "printTest":
-        printTest(result);
+      case "writeData":
+        writeData(result, args);
         break;
       default:
         result.notImplemented();
@@ -179,7 +158,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
           break;
       }
     } catch (SecurityException e) {
-      result.error("invalid_argument", "argument 'address' not found", null);
+      result.error("invalid_argument", "Argument 'address' not found", null);
     }
 
   }
@@ -241,12 +220,12 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
       new DeviceConnFactoryManager.Build()
               .setId(id)
-              //设置连接方式 // Set the connection method
+              // Set the connection method
               .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
-              //设置连接的蓝牙mac地址 // Set the connected Bluetooth mac address
+              // Set the connected Bluetooth mac address
               .setMacAddress(address)
               .build();
-      //打开端口 // Open port
+      // Open port
       threadPool = ThreadPool.getInstantiation();
       threadPool.addSerialTask(new Runnable() {
         @Override
@@ -257,7 +236,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
       result.success(true);
     } else {
-      result.error("invalid_argument", "argument 'address' not found", null);
+      result.error("invalid_argument", "Argument 'address' not found", null);
     }
 
   }
@@ -284,61 +263,32 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
     return true;
   }
 
-  private void printTest(Result result) {
-    if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] == null ||
-            !DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
-
-      result.error("not connect", "state not right", null);
-    }
-
-    threadPool = ThreadPool.getInstantiation();
-    threadPool.addSerialTask(new Runnable() {
-      @Override
-      public void run() {
-        if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.ESC) {
-          DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendByteDataImmediately(FactoryCommand.printSelfTest(FactoryCommand.printerMode.ESC));
-        }else if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.TSC) {
-          DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendByteDataImmediately(FactoryCommand.printSelfTest(FactoryCommand.printerMode.TSC));
-        }else if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.CPCL) {
-          DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendByteDataImmediately(FactoryCommand.printSelfTest(FactoryCommand.printerMode.CPCL));
-        }
-      }
-    });
-
-  }
-
   @SuppressWarnings("unchecked")
-  private void print(Result result, Map<String, Object> args) {
+  private void writeData(Result result, Map<String, Object> args) {
     if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] == null ||
             !DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
 
-      result.error("not connect", "state not right", null);
+      result.error("not_connected", "Incorrect state", null);
     }
 
-    if (args.containsKey("config") && args.containsKey("data")) {
-      final Map<String,Object> config = (Map<String,Object>)args.get("config");
-      final List<Map<String,Object>> list = (List<Map<String,Object>>)args.get("data");
-      if(list == null){
-        return;
-      }
+    if (args.containsKey("bytes")) {
+      final ArrayList<Integer> bytes = (ArrayList<Integer>)args.get("bytes");
 
       threadPool = ThreadPool.getInstantiation();
       threadPool.addSerialTask(new Runnable() {
         @Override
         public void run() {
-          if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.ESC) {
-            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(PrintContent.mapToReceipt(config, list));
-          }else if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.TSC) {
-            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(PrintContent.mapToLabel(config, list));
-          }else if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getCurrentPrinterCommand() == PrinterCommand.CPCL) {
-            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(PrintContent.mapToCPCL(config, list));
+          Vector<Byte> vectorData = new Vector<>();
+          for(int i = 0; i < bytes.size(); ++i) {
+            vectorData.add(Byte.valueOf( Integer.toString(bytes.get(i)) ));
           }
+
+          DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(vectorData);
         }
       });
-    }else{
-      result.error("please add config or data", "", null);
+    } else {
+      result.error("bytes_empty", "Bytes param is empty", null);
     }
-
   }
 
   @Override
@@ -348,7 +298,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
       if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
         startScan(pendingCall, pendingResult);
       } else {
-        pendingResult.error("no_permissions", "this plugin requires location permissions for scanning", null);
+        pendingResult.error("no_permissions", "This app requires location permissions for scanning", null);
         pendingResult = null;
       }
       return true;

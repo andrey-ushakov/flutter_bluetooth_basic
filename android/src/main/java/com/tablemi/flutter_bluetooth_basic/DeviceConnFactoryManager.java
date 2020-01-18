@@ -204,7 +204,7 @@ public class DeviceConnFactoryManager {
     }
 
     /**
-     * 获取端口打开状态（true 打开，false 未打开）
+     * Get port open status (true open, false not open)
      *
      * @return
      */
@@ -384,9 +384,10 @@ public class DeviceConnFactoryManager {
         }
         try {
             this.mPort.writeDataImmediately(data, 0, data.size());
-        } catch (Exception e) {//异常中断发送 // Abort Send
+        } catch (Exception e) {
+            // Abort Send
             mHandler.obtainMessage(Constant.abnormal_Disconnection).sendToTarget();
-//            e.printStackTrace();
+            e.printStackTrace();
 
         }
     }
@@ -394,14 +395,15 @@ public class DeviceConnFactoryManager {
         if (this.mPort == null) {
             return;
         }else {
-            Vector<Byte> datas=new Vector<Byte>();
+            Vector<Byte> datas = new Vector<>();
             for(int i = 0; i < data.length; ++i) {
                 datas.add(Byte.valueOf(data[i]));
             }
             try {
                 this.mPort.writeDataImmediately(datas, 0, datas.size());
-            } catch (IOException e) {//异常中断发送
-//                e.printStackTrace();
+            } catch (IOException e) {
+                // Abort Send
+                e.printStackTrace();
                 mHandler.obtainMessage(Constant.abnormal_Disconnection).sendToTarget();
             }
         }

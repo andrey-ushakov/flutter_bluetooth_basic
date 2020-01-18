@@ -20,9 +20,9 @@ public class PrintContent {
        */
       public static Vector<Byte> mapToReceipt(Map<String,Object> config, List<Map<String,Object>> list) {
             EscCommand esc = new EscCommand();
-            //初始化打印机 // Initialize the printer
+            // Initialize the printer
             esc.addInitializePrinter();
-            //打印走纸多少个单位 // How many units to print
+            // How many units to print
             esc.addPrintAndFeedLines((byte) 3);
 
             // {type:'text|barcode|qrcode|image', content:'', size:4, align: 0|1|2, weight: 0|1, width:0|1, height:0|1, underline:0|1, linefeed: 0|1}

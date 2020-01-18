@@ -136,8 +136,6 @@ class BluetoothManager {
     args['bytes'] = bytes;
     args['length'] = bytes.length;
 
-    print(args['bytes']);
-
     _channel.invokeMethod('writeData', args);
 
     return Future.value(true);
