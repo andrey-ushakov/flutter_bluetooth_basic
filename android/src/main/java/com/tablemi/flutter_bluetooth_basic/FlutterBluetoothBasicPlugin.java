@@ -265,12 +265,6 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
   @SuppressWarnings("unchecked")
   private void writeData(Result result, Map<String, Object> args) {
-    if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] == null ||
-            !DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
-
-      result.error("not_connected", "Incorrect state", null);
-    }
-
     if (args.containsKey("bytes")) {
       final ArrayList<Integer> bytes = (ArrayList<Integer>)args.get("bytes");
 
@@ -280,7 +274,8 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
         public void run() {
           Vector<Byte> vectorData = new Vector<>();
           for(int i = 0; i < bytes.size(); ++i) {
-            vectorData.add(Byte.valueOf( Integer.toString(bytes.get(i)) ));
+            Integer val = bytes.get(i);
+            vectorData.add(Byte.valueOf( Integer.toString(val > 127 ? val-256 : val ) ));
           }
 
           DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(vectorData);

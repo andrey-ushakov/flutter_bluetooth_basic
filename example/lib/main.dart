@@ -1,4 +1,5 @@
 import 'dart:convert';
+// import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_basic/flutter_bluetooth_basic.dart';
@@ -93,6 +94,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _sendData() async {
     List<int> bytes = latin1.encode('Hello world!\n\n\n').toList();
+
+    // Set codetable west. Add import 'dart:typed_data';
+    // List<int> bytes = Uint8List.fromList(List.from('\x1Bt'.codeUnits)..add(6));
+    // Text with special characters
+    // bytes += latin1.encode('blåbærgrød\n\n\n');
+
     await bluetoothManager.writeData(bytes);
   }
 

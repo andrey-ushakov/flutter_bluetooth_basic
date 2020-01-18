@@ -106,7 +106,7 @@
            char cArray[len];
 
            for (int i = 0; i < len; ++i) {
-//               NSLog(@"** ind_%d (d): %@", i,bytes[i]);
+//               NSLog(@"** ind_%d (d): %@, %d", i, bytes[i], [bytes[i] charValue]);
                cArray[i] = [bytes[i] charValue];
            }
            NSData *data2 = [NSData dataWithBytes:cArray length:sizeof(cArray)];
