@@ -14,7 +14,7 @@ Inspired by [bluetooth_print](https://github.com/thon-ju/bluetooth_print).
 
 ## Getting Started
 
-For a full example please check */example* folder. Here are only most important parts of the code to illustrate how to use the library.
+For a full example please check */example* folder. Here are only the most important parts of the code to illustrate how to use the library.
 
 ```dart
 BluetoothManager bluetoothManager = BluetoothManager.instance;
