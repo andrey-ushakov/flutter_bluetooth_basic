@@ -1,5 +1,5 @@
 name: flutter_bluetooth_basic
-description: Flutter plugin that allows to send bytes data to a bluetooth device.
+description: Flutter plugin that allows to find bluetooth devices & send raw bytes data
 version: 0.1.3
 homepage: https://github.com/andrey-ushakov/flutter_bluetooth_basic
 
@@ -17,7 +17,7 @@ dev_dependencies:
     sdk: flutter
   build_runner: ^1.0.0
   json_serializable: ^3.2.2
-  
+
 flutter:
   plugin:
     androidPackage: com.tablemi.flutter_bluetooth_basic

@@ -8,8 +8,8 @@ Inspired by [bluetooth_print](https://github.com/thon-ju/bluetooth_print).
 
 ## Main Features
 * Android and iOS support
-* Scan bluetooth devices (start scan, stop scan)
-* Send raw `List<int> bytes` array to a device
+* Scan for bluetooth devices
+* Send raw `List<int> bytes` data to a device
 
 
 ## Getting Started
