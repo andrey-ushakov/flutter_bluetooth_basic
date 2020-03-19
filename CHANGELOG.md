@@ -1,3 +1,6 @@
+## 0.1.4
+* Android: start scan bug fixed (error handling)
+
 ## 0.1.3
 * Updated README.md
 

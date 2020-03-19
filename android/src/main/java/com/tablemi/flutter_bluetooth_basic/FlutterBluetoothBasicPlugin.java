@@ -170,7 +170,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
       startScan();
       result.success(null);
     } catch (Exception e) {
-      result.error("startScan", e.getMessage(), e);
+      result.error("startScan", e.getMessage(), null);
     }
   }
 
