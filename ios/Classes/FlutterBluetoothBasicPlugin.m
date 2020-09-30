@@ -6,6 +6,9 @@
 @property(nonatomic, retain) FlutterMethodChannel *channel;
 @property(nonatomic, retain) BluetoothPrintStreamHandler *stateStreamHandler;
 @property(nonatomic) NSMutableDictionary *scannedPeripherals;
+@property(nonatomic,assign) NSInteger stateIndex;
+@property(nonatomic,assign) NSInteger bluetoothState;
+;
 @end
 
 @implementation FlutterBluetoothBasicPlugin
@@ -23,7 +26,8 @@
   BluetoothPrintStreamHandler* stateStreamHandler = [[BluetoothPrintStreamHandler alloc] init];
   [stateChannel setStreamHandler:stateStreamHandler];
   instance.stateStreamHandler = stateStreamHandler;
-
+  instance.stateIndex = -1;
+  instance.bluetoothState = 1;
   [registrar addMethodCallDelegate:instance channel:channel];
 }
 
@@ -33,35 +37,42 @@
   if ([@"state" isEqualToString:call.method]) {
     result(nil);
   } else if([@"isAvailable" isEqualToString:call.method]) {
-    
-    result(@(YES));
+    bool isAvailable = self.bluetoothState ==1;
+    result(@(isAvailable));
   } else if([@"isConnected" isEqualToString:call.method]) {
     
     result(@(NO));
+  }
+  else if([@"connectStateInteger" isEqualToString:call.method]) {
+    result(@(self.stateIndex));
   } else if([@"isOn" isEqualToString:call.method]) {
     result(@(YES));
   }else if([@"startScan" isEqualToString:call.method]) {
       NSLog(@"getDevices method -> %@", call.method);
       [self.scannedPeripherals removeAllObjects];
-      
       if (Manager.bleConnecter == nil) {
           [Manager didUpdateState:^(NSInteger state) {
               switch (state) {
                   case CBCentralManagerStateUnsupported:
+                    self.bluetoothState = 4;
                       NSLog(@"The platform/hardware doesn't support Bluetooth Low Energy.");
                       break;
                   case CBCentralManagerStateUnauthorized:
+                    self.bluetoothState = 3;
                       NSLog(@"The app is not authorized to use Bluetooth Low Energy.");
                       break;
                   case CBCentralManagerStatePoweredOff:
+                  self.bluetoothState = 2;
                       NSLog(@"Bluetooth is currently powered off.");
                       break;
                   case CBCentralManagerStatePoweredOn:
                       [self startScan];
+                      self.bluetoothState = 1;
                       NSLog(@"Bluetooth power on");
                       break;
                   case CBCentralManagerStateUnknown:
-                  default:
+
+                  default: self.bluetoothState = -1;
                       break;
               }
           }];
@@ -139,23 +150,28 @@
         switch (state) {
             case CONNECT_STATE_CONNECTING:
                 NSLog(@"status -> %@", @"Connecting ...");
+                self.stateIndex = 0;
                 ret = @0;
                 break;
             case CONNECT_STATE_CONNECTED:
                 NSLog(@"status -> %@", @"Connection success");
                 ret = @1;
+                 self.stateIndex = 1;
                 break;
             case CONNECT_STATE_FAILT:
                 NSLog(@"status -> %@", @"Connection failed");
                 ret = @0;
+                 self.stateIndex = 2;
                 break;
             case CONNECT_STATE_DISCONNECT:
                 NSLog(@"status -> %@", @"Disconnected");
+                 self.stateIndex = 3;
                 ret = @0;
                 break;
             default:
                 NSLog(@"status -> %@", @"Connection timed out");
                 ret = @0;
+                 self.stateIndex = -1;
                 break;
         }
         
