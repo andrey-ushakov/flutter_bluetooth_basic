@@ -30,14 +30,17 @@ class BluetoothManager {
 
   static BluetoothManager get instance => _instance;
 
-  // Future<bool> get isAvailable async =>
-  //     await _channel.invokeMethod('isAvailable').then<bool>((d) => d);
+  Future<bool> get isAvailable async =>
+      await _channel.invokeMethod('isAvailable');
 
   // Future<bool> get isOn async =>
   //     await _channel.invokeMethod('isOn').then<bool>((d) => d);
 
   Future<bool> get isConnected async =>
       await _channel.invokeMethod('isConnected');
+
+  Future<int> get connectStateInteger async =>
+      await _channel.invokeMethod('connectStateInteger');
 
   BehaviorSubject<bool> _isScanning = BehaviorSubject.seeded(false);
   Stream<bool> get isScanning => _isScanning.stream;
