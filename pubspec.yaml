@@ -5,12 +5,12 @@ homepage: https://github.com/andrey-ushakov/flutter_bluetooth_basic
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
-  flutter: ">=1.12.0 <2.0.0"
+  flutter: ">=1.12.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  json_annotation: ^3.0.1
+  json_annotation: ^4.1.0
   rxdart: ^0.26.0
 
 dev_dependencies:
