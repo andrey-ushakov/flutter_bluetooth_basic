@@ -6,8 +6,8 @@ part 'bluetooth_device.g.dart';
 class BluetoothDevice {
   BluetoothDevice();
 
-  String name;
-  String address;
+  String? name;
+  String? address;
   int type = 0;
   bool connected = false;
 
