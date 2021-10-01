@@ -15,8 +15,17 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Vector;
+
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
@@ -27,27 +36,19 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
-
 /** FlutterBluetoothBasicPlugin */
 public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPermissionsResultListener {
   private static final String TAG = "BluetoothBasicPlugin";
-  private int id = 0;
+  private final int id = 0;
   private ThreadPool threadPool;
   private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1451;
   private static final String NAMESPACE = "flutter_bluetooth_basic";
-  private final Registrar registrar;
   private final Activity activity;
   private final MethodChannel channel;
   private final EventChannel stateChannel;
   private final BluetoothManager mBluetoothManager;
-  private BluetoothAdapter mBluetoothAdapter;
+  private final BluetoothAdapter mBluetoothAdapter;
 
-  private MethodCall pendingCall;
   private Result pendingResult;
 
   public static void registerWith(Registrar registrar) {
@@ -56,18 +57,54 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
   }
 
   FlutterBluetoothBasicPlugin(Registrar r){
-    this.registrar = r;
     this.activity = r.activity();
-    this.channel = new MethodChannel(registrar.messenger(), NAMESPACE + "/methods");
-    this.stateChannel = new EventChannel(registrar.messenger(), NAMESPACE + "/state");
-    this.mBluetoothManager = (BluetoothManager) registrar.activity().getSystemService(Context.BLUETOOTH_SERVICE);
+    this.channel = new MethodChannel(r.messenger(), NAMESPACE + "/methods");
+    this.stateChannel = new EventChannel(r.messenger(), NAMESPACE + "/state");
+    this.mBluetoothManager = (BluetoothManager) r.activity().getSystemService(Context.BLUETOOTH_SERVICE);
     this.mBluetoothAdapter = mBluetoothManager.getAdapter();
     channel.setMethodCallHandler(this);
+    StreamHandler stateStreamHandler = new StreamHandler() {
+      private EventSink sink;
+
+      private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+          final String action = intent.getAction();
+          Log.d(TAG, "stateStreamHandler, current action: " + action);
+
+          if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+            threadPool = null;
+            sink.success(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1));
+          } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+            sink.success(1);
+          } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+            threadPool = null;
+            sink.success(0);
+          }
+        }
+      };
+
+      @Override
+      public void onListen(Object o, EventSink eventSink) {
+        sink = eventSink;
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        activity.registerReceiver(mReceiver, filter);
+      }
+
+      @Override
+      public void onCancel(Object o) {
+        sink = null;
+        activity.unregisterReceiver(mReceiver);
+      }
+    };
     stateChannel.setStreamHandler(stateStreamHandler);
   }
 
   @Override
-  public void onMethodCall(MethodCall call, Result result) {
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
     if (mBluetoothAdapter == null && !"isAvailable".equals(call.method)) {
       result.error("bluetooth_unavailable", "Bluetooth is unavailable", null);
       return;
@@ -95,11 +132,10 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
                   activity,
                   new String[] {Manifest.permission.ACCESS_COARSE_LOCATION},
                   REQUEST_COARSE_LOCATION_PERMISSIONS);
-          pendingCall = call;
           pendingResult = result;
           break;
         }
-        startScan(call, result);
+        startScan(result);
         break;
       }
       case "stopScan":
@@ -123,19 +159,6 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
         break;
     }
 
-  }
-
-  private void getDevices(Result result){
-    List<Map<String, Object>> devices = new ArrayList<>();
-    for (BluetoothDevice device : mBluetoothAdapter.getBondedDevices()) {
-      Map<String, Object> ret = new HashMap<>();
-      ret.put("address", device.getAddress());
-      ret.put("name", device.getName());
-      ret.put("type", device.getType());
-      devices.add(ret);
-    }
-
-    result.success(devices);
   }
 
   private void state(Result result){
@@ -163,7 +186,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
   }
 
-  private void startScan(MethodCall call, Result result) {
+  private void startScan(Result result) {
     Log.d(TAG,"start scan ");
 
     try {
@@ -189,7 +212,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
             });
   }
 
-  private ScanCallback mScanCallback = new ScanCallback() {
+  private final ScanCallback mScanCallback = new ScanCallback() {
     @Override
     public void onScanResult(int callbackType, ScanResult result) {
       BluetoothDevice device = result.getDevice();
@@ -266,7 +289,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
   @SuppressWarnings("unchecked")
   private void writeData(Result result, Map<String, Object> args) {
     if (args.containsKey("bytes")) {
-      final ArrayList<Integer> bytes = (ArrayList<Integer>)args.get("bytes");
+      final ArrayList<Integer> bytes = Objects.requireNonNull((ArrayList<Integer>)args.get("bytes"));
 
       threadPool = ThreadPool.getInstantiation();
       threadPool.addSerialTask(new Runnable() {
@@ -291,7 +314,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
     if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
       if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-        startScan(pendingCall, pendingResult);
+        startScan(pendingResult);
       } else {
         pendingResult.error("no_permissions", "This app requires location permissions for scanning", null);
         pendingResult = null;
@@ -301,45 +324,6 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
     return false;
 
   }
-
-  private final StreamHandler stateStreamHandler = new StreamHandler() {
-    private EventSink sink;
-
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-      @Override
-      public void onReceive(Context context, Intent intent) {
-        final String action = intent.getAction();
-        Log.d(TAG, "stateStreamHandler, current action: " + action);
-
-        if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
-          threadPool = null;
-          sink.success(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1));
-        } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
-          sink.success(1);
-        } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
-          threadPool = null;
-          sink.success(0);
-        }
-      }
-    };
-
-    @Override
-    public void onListen(Object o, EventSink eventSink) {
-      sink = eventSink;
-      IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-      filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-      filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
-      filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-      activity.registerReceiver(mReceiver, filter);
-    }
-
-    @Override
-    public void onCancel(Object o) {
-      sink = null;
-      activity.unregisterReceiver(mReceiver);
-    }
-  };
-
 
 
 }
