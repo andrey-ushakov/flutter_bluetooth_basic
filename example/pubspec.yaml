@@ -17,6 +17,10 @@ dev_dependencies:
 
   flutter_bluetooth_basic:
     path: ../
+  integration_test:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
 
 flutter:
   uses-material-design: true

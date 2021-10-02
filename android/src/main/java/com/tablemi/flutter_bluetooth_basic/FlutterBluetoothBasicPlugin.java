@@ -26,6 +26,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Vector;
 
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
@@ -39,75 +43,31 @@ import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 /**
  * FlutterBluetoothBasicPlugin
  */
-public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPermissionsResultListener {
+public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware, RequestPermissionsResultListener {
     private static final String TAG = "BluetoothBasicPlugin";
     private final int id = 0;
     private ThreadPool threadPool;
     private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1451;
     private static final String NAMESPACE = "flutter_bluetooth_basic";
-    private final Activity activity;
-    private final MethodChannel channel;
-    private final EventChannel stateChannel;
-    private final BluetoothManager mBluetoothManager;
-    private final BluetoothAdapter mBluetoothAdapter;
+    private Activity activity;
+    private MethodChannel channel;
+    private EventChannel stateChannel;
+    private BluetoothAdapter bluetoothAdapter;
+    private ActivityPluginBinding activityPluginBinding;
 
     private Result pendingResult;
 
+    // plugin should still contain the static registerWith() method to remain compatible with apps
+    // that don’t use the v2 Android embedding.
     public static void registerWith(Registrar registrar) {
-        final FlutterBluetoothBasicPlugin instance = new FlutterBluetoothBasicPlugin(registrar);
+        FlutterBluetoothBasicPlugin instance = new FlutterBluetoothBasicPlugin();
+        instance.createChannel(registrar.messenger());
         registrar.addRequestPermissionsResultListener(instance);
-    }
-
-    FlutterBluetoothBasicPlugin(Registrar r) {
-        this.activity = r.activity();
-        this.channel = new MethodChannel(r.messenger(), NAMESPACE + "/methods");
-        this.stateChannel = new EventChannel(r.messenger(), NAMESPACE + "/state");
-        this.mBluetoothManager = (BluetoothManager) r.activity().getSystemService(Context.BLUETOOTH_SERVICE);
-        this.mBluetoothAdapter = mBluetoothManager.getAdapter();
-        channel.setMethodCallHandler(this);
-        StreamHandler stateStreamHandler = new StreamHandler() {
-            private EventSink sink;
-
-            private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    final String action = intent.getAction();
-                    Log.d(TAG, "stateStreamHandler, current action: " + action);
-
-                    if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
-                        threadPool = null;
-                        sink.success(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1));
-                    } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
-                        sink.success(1);
-                    } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
-                        threadPool = null;
-                        sink.success(0);
-                    }
-                }
-            };
-
-            @Override
-            public void onListen(Object o, EventSink eventSink) {
-                sink = eventSink;
-                IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-                filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-                filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
-                filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-                activity.registerReceiver(mReceiver, filter);
-            }
-
-            @Override
-            public void onCancel(Object o) {
-                sink = null;
-                activity.unregisterReceiver(mReceiver);
-            }
-        };
-        stateChannel.setStreamHandler(stateStreamHandler);
     }
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        if (mBluetoothAdapter == null && !"isAvailable".equals(call.method)) {
+        if (bluetoothAdapter == null && !"isAvailable".equals(call.method)) {
             result.error("bluetooth_unavailable", "Bluetooth is unavailable", null);
             return;
         }
@@ -119,10 +79,10 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
                 state(result);
                 break;
             case "isAvailable":
-                result.success(mBluetoothAdapter != null);
+                result.success(bluetoothAdapter != null);
                 break;
             case "isOn":
-                result.success(mBluetoothAdapter.isEnabled());
+                result.success(bluetoothAdapter.isEnabled());
                 break;
             case "isConnected":
                 result.success(threadPool != null);
@@ -164,7 +124,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
 
     private void state(Result result) {
         try {
-            switch (mBluetoothAdapter.getState()) {
+            switch (bluetoothAdapter.getState()) {
                 case BluetoothAdapter.STATE_OFF:
                     result.success(BluetoothAdapter.STATE_OFF);
                     break;
@@ -223,7 +183,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
     };
 
     private void startScan() throws IllegalStateException {
-        BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+        BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
         if (scanner == null)
             throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
 
@@ -233,7 +193,7 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
     }
 
     private void stopScan() {
-        BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+        BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
         if (scanner != null) scanner.stopScan(mScanCallback);
     }
 
@@ -322,5 +282,89 @@ public class FlutterBluetoothBasicPlugin implements MethodCallHandler, RequestPe
             return true;
         }
         return false;
+    }
+
+    private void createChannel(BinaryMessenger binaryMessenger) {
+        channel = new MethodChannel(binaryMessenger, NAMESPACE + "/methods");
+        channel.setMethodCallHandler(this);
+
+        stateChannel = new EventChannel(binaryMessenger, NAMESPACE + "/state");
+        StreamHandler stateStreamHandler = new StreamHandler() {
+            private EventSink sink;
+
+            private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final String action = intent.getAction();
+                    Log.d(TAG, "stateStreamHandler, current action: " + action);
+
+                    if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                        threadPool = null;
+                        sink.success(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1));
+                    } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                        sink.success(1);
+                    } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                        threadPool = null;
+                        sink.success(0);
+                    }
+                }
+            };
+
+            @Override
+            public void onListen(Object o, EventSink eventSink) {
+                sink = eventSink;
+                IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+                filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+                filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+                filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+                activity.registerReceiver(mReceiver, filter);
+            }
+
+            @Override
+            public void onCancel(Object o) {
+                sink = null;
+                activity.unregisterReceiver(mReceiver);
+            }
+        };
+        stateChannel.setStreamHandler(stateStreamHandler);
+    }
+
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        createChannel(binding.getBinaryMessenger());
+    }
+
+    @Override
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        channel.setMethodCallHandler(null);
+        stateChannel.setStreamHandler(null);
+    }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        activity = binding.getActivity();
+        BluetoothManager bluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothAdapter = bluetoothManager.getAdapter();
+
+        activityPluginBinding = binding;
+        binding.addRequestPermissionsResultListener(this);
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        onDetachedFromActivity();
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        onAttachedToActivity(binding);
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        if (activityPluginBinding != null) {
+            activityPluginBinding.removeRequestPermissionsResultListener(this);
+            activityPluginBinding = null;
+        }
     }
 }
