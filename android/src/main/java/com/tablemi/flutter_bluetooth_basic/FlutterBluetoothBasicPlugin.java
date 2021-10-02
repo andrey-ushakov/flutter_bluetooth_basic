@@ -163,13 +163,7 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
         ret.put("name", device.getName());
         ret.put("type", device.getType());
 
-        activity.runOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        channel.invokeMethod(name, ret);
-                    }
-                });
+        activity.runOnUiThread(() -> channel.invokeMethod(name, ret));
     }
 
     private final ScanCallback mScanCallback = new ScanCallback() {
@@ -211,12 +205,7 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
                     .build();
             // Open port
             threadPool = ThreadPool.getInstantiation();
-            threadPool.addSerialTask(new Runnable() {
-                @Override
-                public void run() {
-                    DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].openPort();
-                }
-            });
+            threadPool.addSerialTask(() -> DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].openPort());
 
             result.success(true);
         } else {
@@ -252,17 +241,14 @@ public class FlutterBluetoothBasicPlugin implements FlutterPlugin, MethodCallHan
             final ArrayList<Integer> bytes = Objects.requireNonNull((ArrayList<Integer>) args.get("bytes"));
 
             threadPool = ThreadPool.getInstantiation();
-            threadPool.addSerialTask(new Runnable() {
-                @Override
-                public void run() {
-                    Vector<Byte> vectorData = new Vector<>();
-                    for (int i = 0; i < bytes.size(); ++i) {
-                        Integer val = bytes.get(i);
-                        vectorData.add(Byte.valueOf(Integer.toString(val > 127 ? val - 256 : val)));
-                    }
-
-                    DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(vectorData);
+            threadPool.addSerialTask(() -> {
+                Vector<Byte> vectorData = new Vector<>();
+                for (int i = 0; i < bytes.size(); ++i) {
+                    Integer val = bytes.get(i);
+                    vectorData.add(Byte.valueOf(Integer.toString(val > 127 ? val - 256 : val)));
                 }
+
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].sendDataImmediately(vectorData);
             });
         } else {
             result.error("bytes_empty", "Bytes param is empty", null);
