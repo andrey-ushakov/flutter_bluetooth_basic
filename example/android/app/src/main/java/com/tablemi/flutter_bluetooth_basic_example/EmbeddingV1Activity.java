@@ -10,6 +10,6 @@ public class EmbeddingV1Activity extends FlutterActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        FlutterBluetoothBasicPlugin.registerWith(registrarFor("io.flutter.plugins.battery.BatteryPlugin"));
+        FlutterBluetoothBasicPlugin.registerWith(registrarFor("com.tablemi.flutter_bluetooth_basic.FlutterBluetoothBasicPlugin"));
     }
 }
