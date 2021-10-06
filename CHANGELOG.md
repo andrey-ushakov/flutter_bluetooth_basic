@@ -1,3 +1,7 @@
+## 0.1.7
+
+- Fix null Exception at _$BluetoothDeviceFromJson and BluetoothManager.state (PR https://github.com/andrey-ushakov/flutter_bluetooth_basic/pull/26).
+
 ## 0.1.6
 
 - Null-Safety
