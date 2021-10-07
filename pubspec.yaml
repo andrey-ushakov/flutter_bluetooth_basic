@@ -5,7 +5,7 @@ homepage: https://github.com/andrey-ushakov/flutter_bluetooth_basic
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
-  flutter: ">=1.12.0"
+  flutter: ">=1.12.13+hotfix.6"
 
 dependencies:
   flutter:
@@ -17,7 +17,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   build_runner: ^1.0.0
-  json_serializable: ^3.2.2
+  json_serializable: ^4.1.0
+  integration_test:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
 
 flutter:
   plugin:
