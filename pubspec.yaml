@@ -11,13 +11,13 @@ dependencies:
   flutter:
     sdk: flutter
   json_annotation: ^4.1.0
-  rxdart: ^0.26.0
+  rxdart: ^0.27.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   build_runner: ^1.0.0
-  json_serializable: ^3.2.2
+  json_serializable: ^4.0.3
 
 flutter:
   plugin:
