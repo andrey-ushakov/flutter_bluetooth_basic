@@ -157,18 +157,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        OutlineButton(
+                        ElevatedButton(
                           child: Text('connect'),
                           onPressed: _connected ? null : _onConnect,
                         ),
                         SizedBox(width: 10.0),
-                        OutlineButton(
+                        ElevatedButton(
                           child: Text('disconnect'),
                           onPressed: _connected ? _onDisconnect : null,
                         ),
                       ],
                     ),
-                    OutlineButton(
+                    ElevatedButton(
                       child: Text('Send test data'),
                       onPressed: _connected ? _sendData : null,
                     ),

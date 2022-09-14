@@ -26,6 +26,13 @@ class BluetoothManager {
     });
   }
 
+  // method imported from blue_thermal_printer package
+  ///getBondedDevices()
+  Future<List<BluetoothDevice>> getBondedDevices() async {
+    final List list = await (_channel.invokeMethod('getBondedDevices'));
+    return list.map((map) => BluetoothDevice.fromJson(map)).toList();
+  }
+
   static BluetoothManager _instance = BluetoothManager._();
 
   static BluetoothManager get instance => _instance;
